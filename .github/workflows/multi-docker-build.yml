@@ -59,7 +59,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
         
     - name: Login to Quay.io
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.QUAY_USERNAME != ''
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.QUAY_USERNAME
       uses: docker/login-action@v3
       with:
         registry: quay.io
@@ -91,7 +91,7 @@ jobs:
         cache-to: type=gha,mode=max
         
     - name: Push to Quay.io (optional)
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.QUAY_USERNAME != ''
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.QUAY_USERNAME
       run: |
         echo "Pushing to Quay.io..."
         QUAY_IMAGE="quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-demo:latest"
