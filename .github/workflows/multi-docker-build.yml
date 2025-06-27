@@ -97,13 +97,17 @@ jobs:
       run: |
         if [ -n "${{ secrets.QUAY_USERNAME }}" ] && [ -n "${{ secrets.QUAY_PASSWORD }}" ]; then
           echo "Pushing to Quay.io..."
-          # Use the actual username from secrets, not the repository username
-          QUAY_IMAGE="quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-demo:latest"
           echo "Checking, need to delete/ cleanup this part"
-          echo "QUAY_IMAGE: ${QUAY_IMAGE}"
+          # Use the actual username from secrets, not the repository username
+          QUAY_IMAGE="quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-demo:latest"          
+          echo "QUAY_IMAGE 1: ${QUAY_IMAGE}"
+          docker tag ${{ steps.image.outputs.name }}:latest "$QUAY_IMAGE"          
+          echo -e "push: ${QUAY_IMAGE}"
+          docker push "$QUAY_IMAGE"          
           QUAY_IMAGE="quay.io/amitkarpe/${{ matrix.folder }}-demo:latest"
+          echo "QUAY_IMAGE 2: ${QUAY_IMAGE}"
           docker tag ${{ steps.image.outputs.name }}:latest "$QUAY_IMAGE"
-          echo "QUAY_IMAGE: ${QUAY_IMAGE}"
+          echo -e "push: ${QUAY_IMAGE}"
           docker push "$QUAY_IMAGE"
           echo "✅ Successfully pushed to Quay.io: $QUAY_IMAGE"
         else
