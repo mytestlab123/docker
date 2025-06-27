@@ -76,17 +76,22 @@ podman run --rm -p 8080:80 test-image
 
 ## Image Naming Convention
 
-Your container image will be automatically named as:
+Your container image will be automatically published to multiple registries:
 - **Folder name:** `my-awesome-app`
-- **Registry image:** `amitkarpe/my-awesome-app-demo:latest`
-- **Pull command:** `podman pull amitkarpe/my-awesome-app-demo:latest`
+- **Docker Hub:** `amitkarpe/my-awesome-app-demo:latest`
+- **GitHub Container Registry:** `ghcr.io/mytestlab123/my-awesome-app-demo:latest`
+- **Pull commands:**
+  - `podman pull amitkarpe/my-awesome-app-demo:latest`
+  - `podman pull ghcr.io/mytestlab123/my-awesome-app-demo:latest` (no rate limits)
 
 ## What Happens Next
 
 1. **Automated Testing:** GitHub Actions will build your image
 2. **Review Process:** Maintainers will review your PR
-3. **Merge & Deploy:** Once approved, your image will be built with Buildah and pushed to Docker Hub
-4. **Public Access:** Anyone can use: `podman pull amitkarpe/my-awesome-app-demo`
+3. **Merge & Deploy:** Once approved, your image will be built with Buildah and pushed to multiple registries
+4. **Public Access:** 
+   - Docker Hub: `podman pull amitkarpe/my-awesome-app-demo`
+   - GHCR (no rate limits): `podman pull ghcr.io/mytestlab123/my-awesome-app-demo`
 
 ## Best Practices
 

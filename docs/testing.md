@@ -2,24 +2,37 @@
 
 ## Available Images
 
-This repository automatically builds and publishes the following container images using Podman/Buildah:
+This repository automatically builds and publishes the following container images using Podman/Buildah to multiple registries:
 
-| Folder | Container Image | Description |
-|--------|-----------------|-------------|
-| `alpine` | `amitkarpe/alpine-demo:latest` | Lightweight Alpine Linux |
-| `curl` | `amitkarpe/curl-demo:latest` | cURL container for API testing |
+| Folder | Docker Hub | GitHub Container Registry | Description |
+|--------|------------|---------------------------|-------------|
+| `alpine` | `amitkarpe/alpine-demo:latest` | `ghcr.io/mytestlab123/alpine-demo:latest` | Lightweight Alpine Linux |
+| `curl` | `amitkarpe/curl-demo:latest` | `ghcr.io/mytestlab123/curl-demo:latest` | cURL container for API testing |
 
 ## Quick Start Testing
 
 ### Pull and Test All Images
+
+**Option 1: Docker Hub (traditional)**
 ```bash
-# Pull all images with Podman
+# Pull from Docker Hub
 podman pull amitkarpe/alpine-demo:latest
 podman pull amitkarpe/curl-demo:latest
 
 # Test each image
 podman run --rm amitkarpe/alpine-demo:latest echo "Alpine test"
 podman run --rm amitkarpe/curl-demo:latest echo "Curl test"
+```
+
+**Option 2: GitHub Container Registry (no rate limits)**
+```bash
+# Pull from GHCR (recommended for CI/CD)
+podman pull ghcr.io/mytestlab123/alpine-demo:latest
+podman pull ghcr.io/mytestlab123/curl-demo:latest
+
+# Test each image
+podman run --rm ghcr.io/mytestlab123/alpine-demo:latest echo "Alpine test"
+podman run --rm ghcr.io/mytestlab123/curl-demo:latest echo "Curl test"
 ```
 
 ## Detailed Testing Guide

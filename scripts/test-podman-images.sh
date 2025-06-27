@@ -9,19 +9,20 @@ echo "🐳 Testing Container Images with Podman"
 echo "========================================"
 
 IMAGES=("alpine-demo" "curl-demo")
-REGISTRY="amitkarpe"
+REGISTRIES=("docker.io/amitkarpe" "ghcr.io/mytestlab123")
 FAILED_TESTS=0
 
-# Function to test image availability
+# Function to test image availability from multiple registries
 test_image_pull() {
     local image=$1
-    echo "📥 Testing pull: ${REGISTRY}/${image}:latest"
+    local registry=$2
+    echo "📥 Testing pull: ${registry}/${image}:latest"
     
-    if podman pull "${REGISTRY}/${image}:latest" > /dev/null 2>&1; then
-        echo "✅ Pull successful: ${image}"
+    if podman pull "${registry}/${image}:latest" > /dev/null 2>&1; then
+        echo "✅ Pull successful: ${registry}/${image}"
         return 0
     else
-        echo "❌ Pull failed: ${image}"
+        echo "❌ Pull failed: ${registry}/${image}"
         return 1
     fi
 }
@@ -109,27 +110,34 @@ test_security() {
 echo "🧪 Starting comprehensive tests..."
 echo ""
 
-for image in "${IMAGES[@]}"; do
-    echo "========================================="
-    echo "Testing: ${REGISTRY}/${image}:latest"
-    echo "========================================="
+for registry in "${REGISTRIES[@]}"; do
+    echo "========================================"
+    echo "Testing Registry: ${registry}"
+    echo "========================================"
     
-    # Test pull
-    if ! test_image_pull "$image"; then
-        ((FAILED_TESTS++))
-        continue
-    fi
-    
-    # Test basic run
-    if ! test_image_run "$image"; then
-        ((FAILED_TESTS++))
-        continue
-    fi
-    
-    # Show image info
-    echo "📊 Image information:"
-    podman images "${REGISTRY}/${image}:latest" --format "table {{.Repository}} {{.Tag}} {{.Size}} {{.CreatedAt}}"
-    
+    for image in "${IMAGES[@]}"; do
+        echo "----------------------------------------"
+        echo "Testing: ${registry}/${image}:latest"
+        echo "----------------------------------------"
+        
+        # Test pull
+        if ! test_image_pull "$image" "$registry"; then
+            ((FAILED_TESTS++))
+            continue
+        fi
+        
+        # Test basic run (using first successful pull)
+        if ! test_image_run "${registry}/${image}"; then
+            ((FAILED_TESTS++))
+            continue
+        fi
+        
+        # Show image info
+        echo "📊 Image information:"
+        podman images "${registry}/${image}:latest" --format "table {{.Repository}} {{.Tag}} {{.Size}} {{.CreatedAt}}" 2>/dev/null || echo "Image info unavailable"
+        
+        echo ""
+    done
     echo ""
 done
 
@@ -175,8 +183,12 @@ if [ $FAILED_TESTS -eq 0 ]; then
     echo "🎉 All tests passed! All images are working correctly."
     echo ""
     echo "📋 Available images:"
-    for image in "${IMAGES[@]}"; do
-        echo "   podman pull ${REGISTRY}/${image}:latest"
+    for registry in "${REGISTRIES[@]}"; do
+        echo "  Registry: ${registry}"
+        for image in "${IMAGES[@]}"; do
+            echo "    podman pull ${registry}/${image}:latest"
+        done
+        echo ""
     done
     echo ""
     echo "🚀 Ready for production use!"

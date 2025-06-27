@@ -91,41 +91,94 @@ jobs:
         # Show image info
         podman images ${{ steps.image.outputs.name }}:latest
         
-    - name: Login to Docker Hub with Skopeo
+    - name: Login to multiple registries
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
-        echo "Logging in to Docker Hub via Skopeo..."
+        echo "Logging in to multiple registries..."
         
         # Create auth file for Skopeo
         mkdir -p ${HOME}/.config/containers
         
-        # Login using Skopeo (stores credentials)
+        # Login to Docker Hub
         echo "${{ secrets.DOCKER_PASSWORD }}" | skopeo login \
           --username "${{ secrets.DOCKER_USERNAME }}" \
           --password-stdin \
           docker.io
           
-    - name: Push image with Skopeo
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: |
-        echo "Pushing image with Skopeo..."
-        
-        # Push to Docker Hub using Skopeo
-        skopeo copy \
-          containers-storage:${{ steps.image.outputs.name }}:latest \
-          docker://docker.io/${{ steps.image.outputs.name }}:latest
+        # Login to GitHub Container Registry
+        echo "${{ secrets.GITHUB_TOKEN }}" | skopeo login \
+          --username "${{ github.actor }}" \
+          --password-stdin \
+          ghcr.io
           
-        echo "✅ Successfully pushed ${{ steps.image.outputs.name }}:latest to Docker Hub"
-        
-    - name: Verify image in registry
+        # Optional: Login to Quay.io (if secrets are provided)
+        if [ -n "${{ secrets.QUAY_USERNAME }}" ] && [ -n "${{ secrets.QUAY_PASSWORD }}" ]; then
+          echo "${{ secrets.QUAY_PASSWORD }}" | skopeo login \
+            --username "${{ secrets.QUAY_USERNAME }}" \
+            --password-stdin \
+            quay.io
+          echo "✅ Logged in to Docker Hub, GHCR, and Quay.io"
+        else
+          echo "✅ Logged in to Docker Hub and GHCR (Quay.io secrets not provided)"
+        fi
+          
+    - name: Push to multiple registries
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
-        echo "Verifying image in Docker Hub..."
+        echo "Pushing to multiple registries for rate limit mitigation..."
         
-        # Verify the image can be inspected remotely
+        # Define registry configurations
+        DOCKER_HUB_IMAGE="docker://docker.io/${{ steps.image.outputs.name }}:latest"
+        GHCR_IMAGE="docker://ghcr.io/${{ github.repository_owner }}/${{ matrix.folder }}-demo:latest"
+        QUAY_IMAGE="docker://quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-demo:latest"
+        LOCAL_IMAGE="containers-storage:${{ steps.image.outputs.name }}:latest"
+        
+        echo "📦 Pushing to registries:"
+        echo "  - Docker Hub: ${{ steps.image.outputs.name }}:latest"
+        echo "  - GHCR: ghcr.io/${{ github.repository_owner }}/${{ matrix.folder }}-demo:latest"
+        if [ -n "${{ secrets.QUAY_USERNAME }}" ]; then
+          echo "  - Quay.io: quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-demo:latest"
+        fi
+        
+        # Push to Docker Hub (for compatibility)
+        echo "🐳 Pushing to Docker Hub..."
+        skopeo copy "$LOCAL_IMAGE" "$DOCKER_HUB_IMAGE"
+        echo "✅ Successfully pushed to Docker Hub"
+        
+        # Push to GitHub Container Registry (no rate limits)
+        echo "📦 Pushing to GitHub Container Registry..."
+        skopeo copy "$LOCAL_IMAGE" "$GHCR_IMAGE"
+        echo "✅ Successfully pushed to GHCR"
+        
+        # Push to Quay.io (if configured)
+        if [ -n "${{ secrets.QUAY_USERNAME }}" ] && [ -n "${{ secrets.QUAY_PASSWORD }}" ]; then
+          echo "🔴 Pushing to Quay.io..."
+          skopeo copy "$LOCAL_IMAGE" "$QUAY_IMAGE"
+          echo "✅ Successfully pushed to Quay.io"
+        else
+          echo "⏭️ Skipping Quay.io (secrets not configured)"
+        fi
+        
+    - name: Verify images in registries
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "Verifying images in multiple registries..."
+        
+        # Verify Docker Hub
+        echo "🔍 Verifying Docker Hub..."
         skopeo inspect docker://docker.io/${{ steps.image.outputs.name }}:latest
         
-        echo "✅ Image verification completed"
+        # Verify GHCR
+        echo "🔍 Verifying GHCR..."
+        skopeo inspect docker://ghcr.io/${{ github.repository_owner }}/${{ matrix.folder }}-demo:latest
+        
+        # Verify Quay.io (if configured)
+        if [ -n "${{ secrets.QUAY_USERNAME }}" ] && [ -n "${{ secrets.QUAY_PASSWORD }}" ]; then
+          echo "🔍 Verifying Quay.io..."
+          skopeo inspect docker://quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-demo:latest
+        fi
+        
+        echo "✅ All registry verifications completed"
         
     - name: Cleanup
       if: always()
