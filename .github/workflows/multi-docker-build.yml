@@ -107,7 +107,7 @@ jobs:
 
           
           #set -x
-          #set +e
+          set +e
           echo "TAG: ${{ steps.image.outputs.name }}:latest "
 
           echo "docker tag ${{ steps.image.outputs.name }}:latest "$QUAY_IMAGE""
