@@ -50,6 +50,22 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         registry: docker.io
         
+    - name: Login to GitHub Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Login to Quay.io
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.QUAY_USERNAME != ''
+      uses: docker/login-action@v3
+      with:
+        registry: quay.io
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+        
     - name: Generate image name
       id: image
       run: |
@@ -63,16 +79,40 @@ jobs:
         echo "name=$IMAGE_NAME" >> $GITHUB_OUTPUT
         echo "Building image: $IMAGE_NAME from folder: $FOLDER_NAME"
         
-    - name: Build and push Docker image
+    - name: Build and push to multiple registries
       uses: docker/build-push-action@v5
       with:
         context: ./${{ matrix.folder }}
         push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        tags: ${{ steps.image.outputs.name }}:latest
+        tags: |
+          ${{ steps.image.outputs.name }}:latest
+          ghcr.io/${{ github.repository_owner }}/${{ matrix.folder }}-demo:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        
+    - name: Push to Quay.io (optional)
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.QUAY_USERNAME != ''
+      run: |
+        echo "Pushing to Quay.io..."
+        QUAY_IMAGE="quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-demo:latest"
+        docker tag ${{ steps.image.outputs.name }}:latest "$QUAY_IMAGE"
+        docker push "$QUAY_IMAGE"
+        echo "✅ Successfully pushed to Quay.io: $QUAY_IMAGE"
         
     - name: Test built image
       run: |
         echo "Testing image: ${{ steps.image.outputs.name }}"
         docker run --rm ${{ steps.image.outputs.name }}:latest echo "Image test successful" || echo "Image test completed"
+        
+    - name: Verify multi-registry deployment
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "🎉 Multi-registry deployment completed!"
+        echo "📦 Images available at:"
+        echo "  - Docker Hub: ${{ steps.image.outputs.name }}:latest"
+        echo "  - GHCR: ghcr.io/${{ github.repository_owner }}/${{ matrix.folder }}-demo:latest"
+        if [ -n "${{ secrets.QUAY_USERNAME }}" ]; then
+          echo "  - Quay.io: quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-demo:latest"
+        fi
+        echo ""
+        echo "🚀 Rate limit mitigation: Use GHCR for unlimited pulls!"
