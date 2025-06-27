@@ -18,8 +18,11 @@ jobs:
     - name: Detect changed folders
       id: changes
       run: |
-        # Get all folders that contain Dockerfiles
-        FOLDERS=$(find . -name "Dockerfile" -not -path "./.git/*" | xargs dirname | cut -c3- | jq -R -s -c 'split("\n")[:-1]')
+        # Get all folders that contain Dockerfiles (excluding root)
+        echo "=== Debugging folder detection ==="
+        find . -name "Dockerfile" -not -path "./.git/*"
+        echo "=== Processing folders ==="
+        FOLDERS=$(find . -mindepth 2 -name "Dockerfile" -not -path "./.git/*" | xargs dirname | cut -c3- | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
         echo "folders=$FOLDERS" >> $GITHUB_OUTPUT
         echo "Found folders with Dockerfiles: $FOLDERS"
 
@@ -51,9 +54,14 @@ jobs:
       id: image
       run: |
         FOLDER_NAME="${{ matrix.folder }}"
+        # Validate folder name is not empty
+        if [ -z "$FOLDER_NAME" ]; then
+          echo "Error: Empty folder name detected"
+          exit 1
+        fi
         IMAGE_NAME="amitkarpe/${FOLDER_NAME}-demo"
         echo "name=$IMAGE_NAME" >> $GITHUB_OUTPUT
-        echo "Building image: $IMAGE_NAME"
+        echo "Building image: $IMAGE_NAME from folder: $FOLDER_NAME"
         
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
