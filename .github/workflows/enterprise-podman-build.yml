@@ -111,14 +111,17 @@ jobs:
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       continue-on-error: true
       run: |
-        if [ -n "${{ secrets.QUAY_USERNAME }}" ]; then
+        if [ -n "${{ secrets.QUAY_USERNAME }}" ] && [ -n "${{ secrets.QUAY_PASSWORD }}" ]; then
           echo "Pushing to Quay.io with Podman..."
+          # Use the actual username from secrets, not the repository username
           QUAY_IMAGE="quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-enterprise:latest"
           podman tag ${{ steps.build-image.outputs.image-with-tag }} "$QUAY_IMAGE"
           podman push "$QUAY_IMAGE"
           echo "✅ Successfully pushed to Quay.io: $QUAY_IMAGE"
         else
           echo "⏭️ Skipping Quay.io (credentials not configured)"
+          echo "QUAY_USERNAME available: ${{ secrets.QUAY_USERNAME != '' }}"
+          echo "QUAY_PASSWORD available: ${{ secrets.QUAY_PASSWORD != '' }}"
         fi
         
     - name: Test built image with Podman
@@ -139,7 +142,7 @@ jobs:
         echo "📦 Enterprise images available at:"
         echo "  - Docker Hub: ${{ steps.meta.outputs.name }}:latest"
         echo "  - GHCR: ghcr.io/${{ github.repository_owner }}/${{ matrix.folder }}-enterprise:latest"
-        if [ -n "${{ secrets.QUAY_USERNAME }}" ]; then
+        if [ -n "${{ secrets.QUAY_USERNAME }}" ] && [ -n "${{ secrets.QUAY_PASSWORD }}" ]; then
           echo "  - Quay.io: quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-enterprise:latest"
         fi
         echo ""

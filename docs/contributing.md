@@ -107,6 +107,8 @@ Both image types are deployed to:
 - GitHub Container Registry: `ghcr.io/mytestlab123/{name}-{suffix}:latest`
 - Quay.io (optional): `quay.io/{username}/{name}-{suffix}:latest`
 
+For Quay.io setup and testing, see the [Quay.io Integration Guide](quay-integration-guide.md).
+
 ## What Happens Next
 
 1. **Automated Testing:** GitHub Actions will build your image with both workflows:
@@ -187,6 +189,7 @@ For detailed enterprise container setup, see [Enterprise Container Tools Guide](
 - Check existing folders for examples
 - Review the [Testing Guide](testing.md)
 - Learn about [Enterprise Container Tools](enterprise-container-tools.md)
+- Configure [Quay.io Integration](quay-integration-guide.md)
 - Open an issue if you have questions
 - Join our community discussions
 

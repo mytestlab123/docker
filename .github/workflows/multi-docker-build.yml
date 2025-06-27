@@ -95,14 +95,17 @@ jobs:
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       continue-on-error: true
       run: |
-        if [ -n "${{ secrets.QUAY_USERNAME }}" ]; then
+        if [ -n "${{ secrets.QUAY_USERNAME }}" ] && [ -n "${{ secrets.QUAY_PASSWORD }}" ]; then
           echo "Pushing to Quay.io..."
+          # Use the actual username from secrets, not the repository username
           QUAY_IMAGE="quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-demo:latest"
           docker tag ${{ steps.image.outputs.name }}:latest "$QUAY_IMAGE"
           docker push "$QUAY_IMAGE"
           echo "✅ Successfully pushed to Quay.io: $QUAY_IMAGE"
         else
           echo "⏭️ Skipping Quay.io (credentials not configured)"
+          echo "QUAY_USERNAME available: ${{ secrets.QUAY_USERNAME != '' }}"
+          echo "QUAY_PASSWORD available: ${{ secrets.QUAY_PASSWORD != '' }}"
         fi
         
     - name: Test built image
@@ -117,7 +120,7 @@ jobs:
         echo "📦 Images available at:"
         echo "  - Docker Hub: ${{ steps.image.outputs.name }}:latest"
         echo "  - GHCR: ghcr.io/${{ github.repository_owner }}/${{ matrix.folder }}-demo:latest"
-        if [ -n "${{ secrets.QUAY_USERNAME }}" ]; then
+        if [ -n "${{ secrets.QUAY_USERNAME }}" ] && [ -n "${{ secrets.QUAY_PASSWORD }}" ]; then
           echo "  - Quay.io: quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-demo:latest"
         fi
         echo ""
