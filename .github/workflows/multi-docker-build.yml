@@ -115,6 +115,13 @@ jobs:
           echo "QUAY_IMAGE 2: ${QUAY_IMAGE}"
           docker tag ${{ steps.image.outputs.name }}:latest "$QUAY_IMAGE"
           echo -e "push: ${QUAY_IMAGE}"
+          echo "=========================="
+          docker images
+          echo "=========================="
+          echo "=========================="
+          docker images | grep "demo:latest"
+          echo "=========================="
+          
           docker push "$QUAY_IMAGE"
           echo "✅ Successfully pushed to Quay.io: $QUAY_IMAGE"
         else
