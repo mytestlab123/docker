@@ -4,6 +4,7 @@
 # Tests image availability and pull functionality across Docker Hub, GHCR, and Quay.io
 
 set -e
+#set -x
 
 # Colors for output
 RED='\033[0;31m'
