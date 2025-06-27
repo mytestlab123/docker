@@ -12,7 +12,7 @@ echo "- Architecture: $(uname -m)"
 echo ""
 echo "Available tools: curl, wget, bash, jq"
 echo ""
-echo "Lightweight container ready! ⚡"
+echo "Lightweight container ready! ⚡ (Multi-registry test)"
 
 # Keep container running
 tail -f /dev/null
