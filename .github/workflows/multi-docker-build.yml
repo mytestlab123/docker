@@ -106,7 +106,7 @@ jobs:
           #docker push "$QUAY_IMAGE"
 
           
-          #set -x
+          set -x
           set +e
           echo "TAG: ${{ steps.image.outputs.name }}:latest "
 
@@ -114,6 +114,7 @@ jobs:
           QUAY_IMAGE="quay.io/amitkarpe/${{ matrix.folder }}-demo:latest"
           echo "QUAY_IMAGE 2: ${QUAY_IMAGE}"
           docker tag ${{ steps.image.outputs.name }}:latest "$QUAY_IMAGE"
+          docker tag ${{ matrix.folder }}-demo:latest "quay.io/amitkarpe/${{ matrix.folder }}-demo:latest"
           echo -e "push: ${QUAY_IMAGE}"
           echo "=========================="
           docker images
