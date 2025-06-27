@@ -114,7 +114,8 @@ jobs:
         if [ -n "${{ secrets.QUAY_USERNAME }}" ] && [ -n "${{ secrets.QUAY_PASSWORD }}" ]; then
           echo "Pushing to Quay.io with Podman..."
           # Use the actual username from secrets, not the repository username
-          QUAY_IMAGE="quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-enterprise:latest"
+          # QUAY_IMAGE="quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-enterprise:latest"
+          QUAY_IMAGE="quay.io/amitkarpe/${{ matrix.folder }}-enterprise:latest"
           podman tag ${{ steps.build-image.outputs.image-with-tag }} "$QUAY_IMAGE"
           podman push "$QUAY_IMAGE"
           echo "✅ Successfully pushed to Quay.io: $QUAY_IMAGE"
