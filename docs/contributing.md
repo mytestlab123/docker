@@ -34,18 +34,32 @@ Include any files your Docker image needs:
 
 ### Step 4: Test Locally
 Before submitting, test your container image:
-```bash
-# Build the image with Podman
-podman build -t test-image .
 
-# Alternative: Build with Buildah
+#### Option A: Enterprise Tools (Recommended)
+```bash
+# Use the enterprise build script
+./scripts/enterprise-build.sh your-folder-name --test
+
+# Manual build with Buildah (rootless)
 buildah build-using-dockerfile -t test-image .
 
-# Run the image
+# Run with Podman (daemonless)
 podman run --rm test-image
 
+# Security inspection with Skopeo
+skopeo inspect containers-storage:test-image
+```
+
+#### Option B: Standard Tools
+```bash
+# Build the image with Docker
+docker build -t test-image .
+
+# Run the image
+docker run --rm test-image
+
 # Test with different configurations
-podman run --rm -p 8080:80 test-image
+docker run --rm -p 8080:80 test-image
 ```
 
 ### Step 5: Create a Pull Request
@@ -76,17 +90,33 @@ podman run --rm -p 8080:80 test-image
 
 ## Image Naming Convention
 
-Your container image will be automatically named as:
+Your container images will be automatically named as:
+
+### Standard Images (Docker workflow)
 - **Folder name:** `my-awesome-app`
 - **Registry image:** `amitkarpe/my-awesome-app-demo:latest`
-- **Pull command:** `podman pull amitkarpe/my-awesome-app-demo:latest`
+- **Pull command:** `docker pull amitkarpe/my-awesome-app-demo:latest`
+
+### Enterprise Images (Podman/Buildah workflow)
+- **Folder name:** `my-awesome-app`  
+- **Registry image:** `amitkarpe/my-awesome-app-enterprise:latest`
+- **Pull command:** `podman pull amitkarpe/my-awesome-app-enterprise:latest`
+
+Both image types are deployed to:
+- Docker Hub: `amitkarpe/{name}-{suffix}:latest`
+- GitHub Container Registry: `ghcr.io/mytestlab123/{name}-{suffix}:latest`
+- Quay.io (optional): `quay.io/{username}/{name}-{suffix}:latest`
 
 ## What Happens Next
 
-1. **Automated Testing:** GitHub Actions will build your image
+1. **Automated Testing:** GitHub Actions will build your image with both workflows:
+   - **Standard workflow**: Docker build → `amitkarpe/my-awesome-app-demo`
+   - **Enterprise workflow**: Buildah build → `amitkarpe/my-awesome-app-enterprise`
 2. **Review Process:** Maintainers will review your PR
-3. **Merge & Deploy:** Once approved, your image will be built with Buildah and pushed to Docker Hub
-4. **Public Access:** Anyone can use: `podman pull amitkarpe/my-awesome-app-demo`
+3. **Merge & Deploy:** Once approved, images are pushed to multiple registries
+4. **Public Access:** 
+   - Standard: `docker pull amitkarpe/my-awesome-app-demo`
+   - Enterprise: `podman pull amitkarpe/my-awesome-app-enterprise`
 
 ## Best Practices
 
@@ -124,10 +154,39 @@ my-awesome-app/
     └── index.html
 ```
 
+## Enterprise Container Tools
+
+This project supports enterprise-grade container tools for enhanced security:
+
+### Quick Start with Enterprise Tools
+```bash
+# Install tools (Ubuntu/Debian)
+sudo apt-get install podman buildah skopeo
+
+# Use the enterprise build script
+./scripts/enterprise-build.sh --list
+./scripts/enterprise-build.sh alpine --test --push
+
+# Manual enterprise workflow
+cd your-folder/
+buildah build-using-dockerfile -t my-app-enterprise .
+podman run --rm my-app-enterprise
+skopeo inspect containers-storage:my-app-enterprise
+```
+
+### Enterprise vs Standard
+- **Security**: Rootless builds (Buildah) vs daemon-based (Docker)
+- **Performance**: Daemonless runtime (Podman) vs Docker daemon
+- **Compliance**: Enhanced enterprise security posture
+- **Images**: `-enterprise` suffix vs `-demo` suffix
+
+For detailed enterprise container setup, see [Enterprise Container Tools Guide](enterprise-container-tools.md).
+
 ## Need Help?
 
 - Check existing folders for examples
 - Review the [Testing Guide](testing.md)
+- Learn about [Enterprise Container Tools](enterprise-container-tools.md)
 - Open an issue if you have questions
 - Join our community discussions
 
