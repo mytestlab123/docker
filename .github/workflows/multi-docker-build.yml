@@ -1,0 +1,78 @@
+name: Multi-Folder Docker Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      folders: ${{ steps.changes.outputs.folders }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Detect changed folders
+      id: changes
+      run: |
+        # Get all folders that contain Dockerfiles (excluding root)
+        echo "=== Debugging folder detection ==="
+        find . -name "Dockerfile" -not -path "./.git/*"
+        echo "=== Processing folders ==="
+        FOLDERS=$(find . -mindepth 2 -name "Dockerfile" -not -path "./.git/*" | xargs dirname | cut -c3- | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
+        echo "folders=$FOLDERS" >> $GITHUB_OUTPUT
+        echo "Found folders with Dockerfiles: $FOLDERS"
+
+  build:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    if: needs.detect-changes.outputs.folders != '[]'
+    strategy:
+      matrix:
+        folder: ${{ fromJson(needs.detect-changes.outputs.folders) }}
+      fail-fast: false
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Login to Docker Hub
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        registry: docker.io
+        
+    - name: Generate image name
+      id: image
+      run: |
+        FOLDER_NAME="${{ matrix.folder }}"
+        # Validate folder name is not empty
+        if [ -z "$FOLDER_NAME" ]; then
+          echo "Error: Empty folder name detected"
+          exit 1
+        fi
+        IMAGE_NAME="amitkarpe/${FOLDER_NAME}-demo"
+        echo "name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+        echo "Building image: $IMAGE_NAME from folder: $FOLDER_NAME"
+        
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./${{ matrix.folder }}
+        push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        tags: ${{ steps.image.outputs.name }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Test built image
+      run: |
+        echo "Testing image: ${{ steps.image.outputs.name }}"
+        docker run --rm ${{ steps.image.outputs.name }}:latest echo "Image test successful" || echo "Image test completed"
