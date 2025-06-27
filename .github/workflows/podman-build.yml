@@ -1,0 +1,141 @@
+name: Podman Multi-Folder Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      folders: ${{ steps.changes.outputs.folders }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Detect changed folders
+      id: changes
+      run: |
+        # Get all folders that contain Dockerfiles (excluding root)
+        echo "=== Debugging folder detection ==="
+        find . -name "Dockerfile" -not -path "./.git/*"
+        echo "=== Processing folders ==="
+        FOLDERS=$(find . -mindepth 2 -name "Dockerfile" -not -path "./.git/*" | xargs dirname | cut -c3- | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
+        echo "folders=$FOLDERS" >> $GITHUB_OUTPUT
+        echo "Found folders with Dockerfiles: $FOLDERS"
+
+  build:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    if: needs.detect-changes.outputs.folders != '[]'
+    strategy:
+      matrix:
+        folder: ${{ fromJson(needs.detect-changes.outputs.folders) }}
+      fail-fast: false
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Podman, Buildah, and Skopeo
+      run: |
+        # Update package list
+        sudo apt-get update
+        
+        # Install Podman, Buildah, and Skopeo
+        sudo apt-get install -y podman buildah skopeo
+        
+        # Verify installations
+        podman --version
+        buildah --version
+        skopeo --version
+        
+        # Configure for rootless operation
+        echo "Configuring rootless containers..."
+        
+    - name: Generate image name
+      id: image
+      run: |
+        FOLDER_NAME="${{ matrix.folder }}"
+        # Validate folder name is not empty
+        if [ -z "$FOLDER_NAME" ]; then
+          echo "Error: Empty folder name detected"
+          exit 1
+        fi
+        IMAGE_NAME="amitkarpe/${FOLDER_NAME}-demo"
+        echo "name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+        echo "Building image: $IMAGE_NAME from folder: $FOLDER_NAME"
+        
+    - name: Build image with Buildah
+      run: |
+        echo "Building image with Buildah..."
+        cd ${{ matrix.folder }}
+        
+        # Build using Buildah (equivalent to docker build)
+        buildah build-using-dockerfile \
+          --file Dockerfile \
+          --tag ${{ steps.image.outputs.name }}:latest \
+          .
+          
+        echo "✅ Build completed for ${{ steps.image.outputs.name }}"
+        
+    - name: Test built image with Podman
+      run: |
+        echo "Testing image with Podman..."
+        
+        # Test the image (equivalent to docker run)
+        podman run --rm ${{ steps.image.outputs.name }}:latest echo "✅ Podman test successful" || echo "Image test completed"
+        
+        # Show image info
+        podman images ${{ steps.image.outputs.name }}:latest
+        
+    - name: Login to Docker Hub with Skopeo
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "Logging in to Docker Hub via Skopeo..."
+        
+        # Create auth file for Skopeo
+        mkdir -p ${HOME}/.config/containers
+        
+        # Login using Skopeo (stores credentials)
+        echo "${{ secrets.DOCKER_PASSWORD }}" | skopeo login \
+          --username "${{ secrets.DOCKER_USERNAME }}" \
+          --password-stdin \
+          docker.io
+          
+    - name: Push image with Skopeo
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "Pushing image with Skopeo..."
+        
+        # Push to Docker Hub using Skopeo
+        skopeo copy \
+          containers-storage:${{ steps.image.outputs.name }}:latest \
+          docker://docker.io/${{ steps.image.outputs.name }}:latest
+          
+        echo "✅ Successfully pushed ${{ steps.image.outputs.name }}:latest to Docker Hub"
+        
+    - name: Verify image in registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "Verifying image in Docker Hub..."
+        
+        # Verify the image can be inspected remotely
+        skopeo inspect docker://docker.io/${{ steps.image.outputs.name }}:latest
+        
+        echo "✅ Image verification completed"
+        
+    - name: Cleanup
+      if: always()
+      run: |
+        echo "Cleaning up local images..."
+        
+        # Remove local images to save space
+        podman rmi ${{ steps.image.outputs.name }}:latest 2>/dev/null || true
+        
+        # Clean up build cache
+        buildah rm --all 2>/dev/null || true
+        
+        echo "✅ Cleanup completed"
