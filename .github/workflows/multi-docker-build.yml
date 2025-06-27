@@ -1,4 +1,4 @@
-name: Multi-Folder Docker Build
+name: Multi-Folder Docker Build (Legacy)
 
 on:
   push:

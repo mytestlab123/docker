@@ -1,13 +1,11 @@
-# Testing Docker Images
+# Testing Container Images
 
 ## Available Images
 
-This repository automatically builds and publishes the following Docker images:
+This repository automatically builds and publishes the following container images using Podman/Buildah:
 
-| Folder | Docker Image | Description |
-|--------|--------------|-------------|
-| `nginx` | `amitkarpe/nginx-demo:latest` | Nginx web server with custom page |
-| `ubuntu` | `amitkarpe/ubuntu-demo:latest` | Ubuntu with development tools |
+| Folder | Container Image | Description |
+|--------|-----------------|-------------|
 | `alpine` | `amitkarpe/alpine-demo:latest` | Lightweight Alpine Linux |
 | `curl` | `amitkarpe/curl-demo:latest` | cURL container for API testing |
 
@@ -15,69 +13,24 @@ This repository automatically builds and publishes the following Docker images:
 
 ### Pull and Test All Images
 ```bash
-# Pull all images
-docker pull amitkarpe/nginx-demo:latest
-docker pull amitkarpe/ubuntu-demo:latest  
-docker pull amitkarpe/alpine-demo:latest
-docker pull amitkarpe/curl-demo:latest
+# Pull all images with Podman
+podman pull amitkarpe/alpine-demo:latest
+podman pull amitkarpe/curl-demo:latest
 
 # Test each image
-docker run --rm amitkarpe/nginx-demo:latest echo "Nginx test"
-docker run --rm amitkarpe/ubuntu-demo:latest echo "Ubuntu test"  
-docker run --rm amitkarpe/alpine-demo:latest echo "Alpine test"
-docker run --rm amitkarpe/curl-demo:latest echo "Curl test"
+podman run --rm amitkarpe/alpine-demo:latest echo "Alpine test"
+podman run --rm amitkarpe/curl-demo:latest echo "Curl test"
 ```
 
 ## Detailed Testing Guide
 
-### 1. Nginx Demo Container
-
-**Purpose:** Web server with custom landing page
-
-```bash
-# Run nginx container
-docker run -d -p 8080:80 --name nginx-test amitkarpe/nginx-demo:latest
-
-# Test the web server
-curl http://localhost:8080
-
-# View in browser
-open http://localhost:8080
-
-# Clean up
-docker stop nginx-test && docker rm nginx-test
-```
-
-**Expected Output:** Custom HTML page showing "Nginx Demo Container"
-
-### 2. Ubuntu Demo Container  
-
-**Purpose:** Ubuntu development environment with tools
-
-```bash
-# Run ubuntu container interactively
-docker run -it --name ubuntu-test amitkarpe/ubuntu-demo:latest bash
-
-# Inside container, test tools:
-curl --version
-wget --version
-vim --version
-htop --version
-
-# Exit and clean up
-exit
-docker rm ubuntu-test
-```
-
-**Expected Output:** All tools should be available and show version info
-
-### 3. Alpine Demo Container
+### 1. Alpine Demo Container
 
 **Purpose:** Lightweight Linux with essential tools
 
 ```bash
-# Run alpine container
-docker run -it --name alpine-test amitkarpe/alpine-demo:latest bash
+# Run alpine container with Podman
+podman run -it --name alpine-test amitkarpe/alpine-demo:latest bash
 
 # Inside container, test tools:
 curl --version
@@ -89,27 +42,27 @@ echo '{"name": "test"}' | jq .
 
 # Exit and clean up
 exit
-docker rm alpine-test
+podman rm alpine-test
 ```
 
 **Expected Output:** Minimal container with working tools
 
-### 4. Curl Demo Container
+### 2. Curl Demo Container
 
 **Purpose:** API testing and HTTP requests
 
 ```bash
-# Test default behavior (httpbin.org)
-docker run --rm amitkarpe/curl-demo:latest
+# Test default behavior (httpbin.org) with Podman
+podman run --rm amitkarpe/curl-demo:latest
 
 # Test custom URL
-docker run --rm amitkarpe/curl-demo:latest https://api.github.com
+podman run --rm amitkarpe/curl-demo:latest https://api.github.com
 
 # Test JSON API
-docker run --rm amitkarpe/curl-demo:latest https://httpbin.org/json
+podman run --rm amitkarpe/curl-demo:latest https://httpbin.org/json
 
 # Test with post data
-docker run --rm amitkarpe/curl-demo:latest -X POST https://httpbin.org/post
+podman run --rm amitkarpe/curl-demo:latest -X POST https://httpbin.org/post
 ```
 
 **Expected Output:** JSON responses from APIs
@@ -119,31 +72,27 @@ docker run --rm amitkarpe/curl-demo:latest -X POST https://httpbin.org/post
 ### Performance Testing
 
 ```bash
-# Test container startup time
-time docker run --rm amitkarpe/alpine-demo:latest echo "Speed test"
+# Test container startup time with Podman
+time podman run --rm amitkarpe/alpine-demo:latest echo "Speed test"
 
 # Check image sizes
-docker images | grep amitkarpe
+podman images | grep amitkarpe
 
 # Memory usage test
-docker stats $(docker run -d amitkarpe/ubuntu-demo:latest sleep 30)
+podman stats $(podman run -d amitkarpe/alpine-demo:latest sleep 30)
 ```
 
 ### Network Testing
 
 ```bash
-# Test container networking
-docker network create test-network
-
-# Run nginx on custom network
-docker run -d --network test-network --name web amitkarpe/nginx-demo:latest
+# Test container networking with Podman
+podman network create test-network
 
 # Test connectivity from curl container
-docker run --rm --network test-network amitkarpe/curl-demo:latest http://web
+podman run --rm --network test-network amitkarpe/curl-demo:latest https://httpbin.org/json
 
 # Clean up
-docker rm -f web
-docker network rm test-network
+podman network rm test-network
 ```
 
 ### Volume Testing
@@ -153,8 +102,8 @@ docker network rm test-network
 mkdir test-data
 echo "Hello from host" > test-data/message.txt
 
-# Mount volume in ubuntu container
-docker run --rm -v $(pwd)/test-data:/data amitkarpe/ubuntu-demo:latest cat /data/message.txt
+# Mount volume in alpine container
+podman run --rm -v $(pwd)/test-data:/data amitkarpe/alpine-demo:latest cat /data/message.txt
 
 # Clean up
 rm -rf test-data
@@ -163,15 +112,14 @@ rm -rf test-data
 ### Security Testing
 
 ```bash
-# Check if containers run as non-root (when applicable)
-docker run --rm amitkarpe/ubuntu-demo:latest id
+# Check if containers run as non-root (Podman runs rootless by default)
+podman run --rm amitkarpe/alpine-demo:latest id
 
 # Test resource limits
-docker run --rm --memory=64m --cpus=0.5 amitkarpe/alpine-demo:latest echo "Resource limited"
+podman run --rm --memory=64m --cpus=0.5 amitkarpe/alpine-demo:latest echo "Resource limited"
 
 # Check for common vulnerabilities
-docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-  aquasec/trivy image amitkarpe/nginx-demo:latest
+podman run --rm aquasec/trivy image amitkarpe/alpine-demo:latest
 ```
 
 ## Automated Testing Scripts
@@ -181,12 +129,12 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 #!/bin/bash
 # test-all-images.sh
 
-IMAGES=("nginx-demo" "ubuntu-demo" "alpine-demo" "curl-demo")
+IMAGES=("alpine-demo" "curl-demo")
 
 for image in "${IMAGES[@]}"; do
     echo "Testing amitkarpe/${image}:latest..."
     
-    if docker run --rm "amitkarpe/${image}:latest" echo "✅ ${image} works"; then
+    if podman run --rm "amitkarpe/${image}:latest" echo "✅ ${image} works"; then
         echo "✅ ${image} test passed"
     else
         echo "❌ ${image} test failed"
