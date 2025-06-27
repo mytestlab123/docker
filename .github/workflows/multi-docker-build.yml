@@ -99,11 +99,13 @@ jobs:
           echo "Pushing to Quay.io..."
           echo "Checking, need to delete/ cleanup this part"
           # Use the actual username from secrets, not the repository username
-          QUAY_IMAGE="quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-demo:latest"          
-          echo "QUAY_IMAGE 1: ${QUAY_IMAGE}"
-          docker tag ${{ steps.image.outputs.name }}:latest "$QUAY_IMAGE"          
-          echo -e "push: ${QUAY_IMAGE}"
-          docker push "$QUAY_IMAGE"          
+          #QUAY_IMAGE="quay.io/${{ secrets.QUAY_USERNAME }}/${{ matrix.folder }}-demo:latest"          
+          #echo "QUAY_IMAGE 1: ${QUAY_IMAGE}"
+          #docker tag ${{ steps.image.outputs.name }}:latest "$QUAY_IMAGE"          
+          #echo -e "push: ${QUAY_IMAGE}"
+          #docker push "$QUAY_IMAGE"          
+
+          echo "docker tag ${{ steps.image.outputs.name }}:latest "$QUAY_IMAGE""
           QUAY_IMAGE="quay.io/amitkarpe/${{ matrix.folder }}-demo:latest"
           echo "QUAY_IMAGE 2: ${QUAY_IMAGE}"
           docker tag ${{ steps.image.outputs.name }}:latest "$QUAY_IMAGE"
