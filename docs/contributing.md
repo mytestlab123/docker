@@ -33,16 +33,19 @@ Include any files your Docker image needs:
 - README files
 
 ### Step 4: Test Locally
-Before submitting, test your Docker image:
+Before submitting, test your container image:
 ```bash
-# Build the image
-docker build -t test-image .
+# Build the image with Podman
+podman build -t test-image .
+
+# Alternative: Build with Buildah
+buildah build-using-dockerfile -t test-image .
 
 # Run the image
-docker run --rm test-image
+podman run --rm test-image
 
 # Test with different configurations
-docker run --rm -p 8080:80 test-image
+podman run --rm -p 8080:80 test-image
 ```
 
 ### Step 5: Create a Pull Request
@@ -73,30 +76,33 @@ docker run --rm -p 8080:80 test-image
 
 ## Image Naming Convention
 
-Your Docker image will be automatically named as:
+Your container image will be automatically named as:
 - **Folder name:** `my-awesome-app`
-- **Docker Hub image:** `amitkarpe/my-awesome-app-demo:latest`
+- **Registry image:** `amitkarpe/my-awesome-app-demo:latest`
+- **Pull command:** `podman pull amitkarpe/my-awesome-app-demo:latest`
 
 ## What Happens Next
 
 1. **Automated Testing:** GitHub Actions will build your image
 2. **Review Process:** Maintainers will review your PR
-3. **Merge & Deploy:** Once approved, your image will be built and pushed to Docker Hub
-4. **Public Access:** Anyone can use: `docker pull amitkarpe/my-awesome-app-demo`
+3. **Merge & Deploy:** Once approved, your image will be built with Buildah and pushed to Docker Hub
+4. **Public Access:** Anyone can use: `podman pull amitkarpe/my-awesome-app-demo`
 
 ## Best Practices
 
-### Dockerfile Tips
+### Container Build Tips
 - Use multi-stage builds for smaller images
-- Install only necessary packages
-- Use `.dockerignore` to exclude unnecessary files
+- Install only necessary packages  
+- Use `.containerignore` or `.dockerignore` to exclude unnecessary files
 - Pin version numbers for reproducible builds
+- Test with both Podman and Buildah for compatibility
 
 ### Security Guidelines
 - Don't include secrets or sensitive data
-- Use non-root users when possible
+- Use non-root users when possible (Podman runs rootless by default)
 - Keep base images updated
 - Scan for vulnerabilities
+- Leverage Podman's rootless security benefits
 
 ### Documentation
 - Add a README.md in your folder explaining:
