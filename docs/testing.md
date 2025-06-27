@@ -2,24 +2,84 @@
 
 ## Available Images
 
-This repository automatically builds and publishes the following container images using Podman/Buildah:
+This repository automatically builds and publishes container images to multiple registries:
 
-| Folder | Container Image | Description |
-|--------|-----------------|-------------|
-| `alpine` | `amitkarpe/alpine-demo:latest` | Lightweight Alpine Linux |
-| `curl` | `amitkarpe/curl-demo:latest` | cURL container for API testing |
+### Standard Images (Docker Workflow)
+| Folder | Docker Hub | GHCR | Quay.io | Description |
+|--------|------------|------|---------|-------------|
+| `alpine` | `amitkarpe/alpine-demo:latest` | `ghcr.io/mytestlab123/alpine-demo:latest` | `quay.io/amitkarpe/alpine-demo:latest` | Lightweight Alpine Linux |
+| `curl` | `amitkarpe/curl-demo:latest` | `ghcr.io/mytestlab123/curl-demo:latest` | `quay.io/amitkarpe/curl-demo:latest` | cURL container for API testing |
+
+### Enterprise Images (Podman/Buildah Workflow)
+| Folder | Docker Hub | GHCR | Quay.io | Description |
+|--------|------------|------|---------|-------------|
+| `alpine` | `amitkarpe/alpine-enterprise:latest` | `ghcr.io/mytestlab123/alpine-enterprise:latest` | `quay.io/amitkarpe/alpine-enterprise:latest` | Enterprise Alpine Linux |
+| `curl` | `amitkarpe/curl-enterprise:latest` | `ghcr.io/mytestlab123/curl-enterprise:latest` | `quay.io/amitkarpe/curl-enterprise:latest` | Enterprise cURL container |
+
+**Registry Access:**
+- **Docker Hub**: Public access, no authentication required
+- **GHCR**: Private repos, requires GitHub token authentication  
+- **Quay.io**: Public access after manual repository creation
 
 ## Quick Start Testing
 
-### Pull and Test All Images
-```bash
-# Pull all images with Podman
-podman pull amitkarpe/alpine-demo:latest
-podman pull amitkarpe/curl-demo:latest
+### Multi-Registry Pull Testing
 
-# Test each image
-podman run --rm amitkarpe/alpine-demo:latest echo "Alpine test"
-podman run --rm amitkarpe/curl-demo:latest echo "Curl test"
+Use our comprehensive testing script:
+```bash
+# Test all images across all registries
+./scripts/test-registry-pulls.sh --all
+
+# Test specific image
+./scripts/test-registry-pulls.sh alpine
+
+# Test specific registry only
+./scripts/test-registry-pulls.sh --all --registry dockerhub
+
+# Test with Skopeo inspection
+./scripts/test-registry-pulls.sh curl --inspect
+```
+
+### Manual Pull and Test Examples
+
+#### Docker Hub (Public - No Auth Required)
+```bash
+# Pull standard images
+docker pull amitkarpe/alpine-demo:latest
+docker pull amitkarpe/curl-demo:latest
+
+# Pull enterprise images  
+docker pull amitkarpe/alpine-enterprise:latest
+docker pull amitkarpe/curl-enterprise:latest
+
+# Test images
+docker run --rm amitkarpe/alpine-demo:latest echo "Docker Hub test"
+podman run --rm amitkarpe/curl-enterprise:latest echo "Docker Hub test"
+```
+
+#### GHCR (Private - Auth Required)
+```bash
+# Authenticate first
+echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USERNAME --password-stdin
+
+# Pull images
+docker pull ghcr.io/mytestlab123/alpine-demo:latest
+docker pull ghcr.io/mytestlab123/curl-enterprise:latest
+
+# Test images
+docker run --rm ghcr.io/mytestlab123/alpine-demo:latest echo "GHCR test"
+podman run --rm ghcr.io/mytestlab123/curl-enterprise:latest echo "GHCR test"
+```
+
+#### Quay.io (Public - Manual Repo Creation)
+```bash
+# Pull images (no auth needed for public repos)
+docker pull quay.io/amitkarpe/alpine-demo:latest
+docker pull quay.io/amitkarpe/curl-enterprise:latest
+
+# Test images
+docker run --rm quay.io/amitkarpe/alpine-demo:latest echo "Quay.io test"
+podman run --rm quay.io/amitkarpe/curl-enterprise:latest echo "Quay.io test"
 ```
 
 ## Detailed Testing Guide
@@ -170,22 +230,42 @@ podman run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 
 ## Automated Testing Scripts
 
-### Quick Test All Images
+### Multi-Registry Testing Script
+```bash
+# Test all registries and images
+./scripts/test-registry-pulls.sh --all
+
+# Test specific scenarios
+./scripts/test-registry-pulls.sh alpine --registry dockerhub
+./scripts/test-registry-pulls.sh --all --suffix enterprise
+./scripts/test-registry-pulls.sh curl --tools docker --inspect
+```
+
+### Quick Test All Images (Legacy)
 ```bash
 #!/bin/bash
-# test-all-images.sh
+# test-all-images.sh - Updated for multi-registry
 
-IMAGES=("nginx-demo" "ubuntu-demo" "alpine-demo" "curl-demo")
+REGISTRIES=(
+    "amitkarpe"
+    "ghcr.io/mytestlab123" 
+    "quay.io/amitkarpe"
+)
+IMAGES=("alpine-demo" "curl-demo" "alpine-enterprise" "curl-enterprise")
 
-for image in "${IMAGES[@]}"; do
-    echo "Testing amitkarpe/${image}:latest..."
-    
-    if podman run --rm "amitkarpe/${image}:latest" echo "✅ ${image} works"; then
-        echo "✅ ${image} test passed"
-    else
-        echo "❌ ${image} test failed"
-    fi
-    echo "---"
+for registry in "${REGISTRIES[@]}"; do
+    echo "Testing registry: $registry"
+    for image in "${IMAGES[@]}"; do
+        echo "Testing ${registry}/${image}:latest..."
+        
+        if docker run --rm "${registry}/${image}:latest" echo "✅ ${image} works" 2>/dev/null; then
+            echo "✅ ${registry}/${image} test passed"
+        else
+            echo "❌ ${registry}/${image} test failed"
+        fi
+        echo "---"
+    done
+    echo ""
 done
 ```
 
@@ -280,24 +360,67 @@ podman network ls
 podman network inspect podman
 ```
 
+## Registry Access Troubleshooting
+
+### Docker Hub Issues
+```bash
+# Rate limit errors
+docker login docker.io  # Increases rate limits
+
+# Test connectivity
+curl -s https://index.docker.io/v1/ | head
+```
+
+### GHCR Issues  
+```bash
+# Authentication errors
+echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USERNAME --password-stdin
+
+# Test token permissions
+curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user
+```
+
+### Quay.io Issues
+```bash
+# Repository not found errors
+# - Verify repository was manually created by admin
+# - Check repository visibility is public
+# - Confirm robot account has access
+
+# Test connectivity
+curl -s https://quay.io/api/v1/discovery | head
+```
+
 ## Reporting Issues
 
 If you find issues during testing:
 
 1. **Gather Information:**
    ```bash
+   # Container tool versions
+   docker version
    podman version
-   podman info
-   podman logs <container-name>
+   
+   # Registry login status
+   docker info | grep -A5 "Registry:"
+   
+   # Test specific registry
+   ./scripts/test-registry-pulls.sh FOLDER --registry REGISTRY_NAME
    ```
 
 2. **Create Minimal Reproduction:**
    ```bash
    # Example reproduction steps
-   podman run --rm amitkarpe/problematic-image:latest command-that-fails
+   docker pull amitkarpe/problematic-image:latest
+   docker run --rm amitkarpe/problematic-image:latest command-that-fails
    ```
 
-3. **Submit Issue:** Include Docker version, OS, and reproduction steps
+3. **Submit Issue:** Include:
+   - Container tool version (Docker/Podman)
+   - Registry being tested (Docker Hub/GHCR/Quay.io)
+   - Authentication status
+   - Complete error messages
+   - Reproduction steps
 
 ## Continuous Integration Testing
 
@@ -320,5 +443,11 @@ jobs:
       run: |
         podman run --rm amitkarpe/${{ matrix.image }}:latest echo "Testing ${{ matrix.image }}"
 ```
+
+## Additional Resources
+
+- [Registry Access Guide](registry-access-guide.md) - Comprehensive registry access documentation
+- [Enterprise Container Tools](enterprise-container-tools.md) - Podman/Buildah/Skopeo guide
+- [Quay.io Integration Guide](quay-integration-guide.md) - Quay.io setup and testing
 
 Happy testing! 🐳✨

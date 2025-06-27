@@ -103,11 +103,18 @@ Your container images will be automatically named as:
 - **Pull command:** `podman pull amitkarpe/my-awesome-app-enterprise:latest`
 
 Both image types are deployed to:
-- Docker Hub: `amitkarpe/{name}-{suffix}:latest`
-- GitHub Container Registry: `ghcr.io/mytestlab123/{name}-{suffix}:latest`
-- Quay.io (optional): `quay.io/{username}/{name}-{suffix}:latest`
+- **Docker Hub**: `amitkarpe/{name}-{suffix}:latest` (Public access)
+- **GitHub Container Registry**: `ghcr.io/mytestlab123/{name}-{suffix}:latest` (Private, auth required)
+- **Quay.io**: `quay.io/amitkarpe/{name}-{suffix}:latest` (Public after manual repo creation)
 
-For Quay.io setup and testing, see the [Quay.io Integration Guide](quay-integration-guide.md).
+**Registry Access:**
+- Docker Hub: No authentication required for pulls
+- GHCR: Requires GitHub token authentication for private repos
+- Quay.io: Manual repository creation required by admin
+
+For complete setup and testing guides, see:
+- [Registry Access Guide](registry-access-guide.md) - Multi-registry access documentation
+- [Quay.io Integration Guide](quay-integration-guide.md) - Quay.io specific setup
 
 ## What Happens Next
 
@@ -188,6 +195,7 @@ For detailed enterprise container setup, see [Enterprise Container Tools Guide](
 
 - Check existing folders for examples
 - Review the [Testing Guide](testing.md)
+- Learn about [Registry Access](registry-access-guide.md)
 - Learn about [Enterprise Container Tools](enterprise-container-tools.md)
 - Configure [Quay.io Integration](quay-integration-guide.md)
 - Open an issue if you have questions
