@@ -4,6 +4,7 @@
 # Tests Quay.io repository and credentials with both Docker and Podman
 
 set -e
+#set -x
 
 # Colors for output
 RED='\033[0;31m'
